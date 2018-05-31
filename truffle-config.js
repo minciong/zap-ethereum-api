@@ -27,7 +27,7 @@ module.exports = {
             port: 7545,
             network_id: "*" 
         },
-	docker: {
+	    docker: {
             host: "bootstrap",
             port: 8545,
             network_id: "*",
@@ -38,6 +38,12 @@ module.exports = {
             port: 8545,
             network_id: "*",
             from: "0x010e49e47cbb34e67c072702ed6f4d8b273f751f"// must be first account in accounts[] array inside tests
+        },
+        parity_node: {
+            host: "52.45.170.126",
+            port: 8545,
+            network_id: "*",
+            //from: "0x010e49e47cbb34e67c072702ed6f4d8b273f751f"// must be first account in accounts[] array inside tests
         }
     }
 };

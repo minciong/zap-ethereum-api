@@ -48,7 +48,7 @@ function getParamsFromIncomingEvent(logs) {
             let obj = new Object();
             obj.id = new BigNumber(log.args.id);
             obj.provider = log.args.provider.toString();
-            obj.recipient = log.args.recipient.toString();
+            obj.subscriber = log.args.subscriber.toString();
             obj.query = log.args.query.toString();
             obj.endpoint = log.args.endpoint.toString();
             obj.params = log.args.endpoint_params;
