@@ -18,7 +18,6 @@ const Registry = artifacts.require("Registry");
 const RegistryStorage = artifacts.require("RegistryStorage");
 const ZapToken = artifacts.require("ZapToken");
 const Cost = artifacts.require("CurrentCost");
-const Subscriber = artifacts.require("Subscriber");
 
 function showReceivedEvents(res) {
     for (let i = 0; i < bondRes.logs.length; i++) {
@@ -32,6 +31,7 @@ function showReceivedEvents(res) {
 }
 
 function isEventReceived(logs, eventName) {
+    logs = logs.logs;
     for (let i in logs) {
         let log = logs[i];
         if (log.event === eventName) {
@@ -42,6 +42,7 @@ function isEventReceived(logs, eventName) {
 }
 
 function getParamsFromIncomingEvent(logs) {
+    logs = logs.logs;
     for (let i in logs) {
         let log = logs[i];
         if (log.event === "Incoming") {
@@ -90,10 +91,14 @@ contract('Dispatch', function (accounts) {
         await this.token.allocate(owner, tokensForOwner, { from: owner });
         await this.token.allocate(provider, tokensForProvider, { from: owner });
         if (sub) {
-            await this.token.allocate(this.subscriber.address, tokensForSubscriber, { from: owner });
             await this.token.allocate(subscriber, tokensForSubscriber, { from: owner });
             await this.token.approve(this.bondage.address, tokensForSubscriber, { from: subscriber });
         }
+    }
+
+    async function performQuery() {
+        await this.bondage.bond(provider, specifier, 10, { from: subscriber });
+        return await this.dispatch.query(provider, 'query', specifier, params, { from: subscriber });
     }
 
     beforeEach(async function deployContracts() {
@@ -153,160 +158,68 @@ contract('Dispatch', function (accounts) {
 
         await prepareProvider.call(this.test);
         await prepareTokens.call(this.test);
-       
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
-
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
 
         // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
+        let logs = await performQuery.call(this.test);
+
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
-        const data = getParamsFromIncomingEvent(logs);
-        await this.test.dispatch.respond1(data.id, "pum-tum-pum", { from: provider })
-
-        logs = await subscriberEvents.get();
-        await expect(isEventReceived(logs, "Result1")).to.be.equal(true);
-
-        const q = await this.test.dispStor.getStatus.call(data.id, { from: owner });
-        await expect(parseInt(q.valueOf())).to.be.equal(1);
-
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
+        getParamsFromIncomingEvent(logs);
     });
 
     it("DISPATCH_5 - respond1() - Respond will throw error if it was called not from provider address", async function () {
 
         await prepareProvider.call(this.test);
-        await prepareTokens.call(this.test);        
+        await prepareTokens.call(this.test);
 
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
+        // GET ALL EVENTS LOG
+        let logs = await performQuery.call(this.test);;
 
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
-
-        // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
         const data = getParamsFromIncomingEvent(logs);
 
         await expect(this.test.dispatch.respond1(data.id, "pum-tum-pum", { from: owner })).to.eventually.be.rejectedWith(EVMRevert);
-
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
     });
 
     it("DISPATCH_6 - respond2() - Respond check", async function () {
 
         await prepareProvider.call(this.test);
-        await prepareTokens.call(this.test);        
-
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
-
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
+        await prepareTokens.call(this.test);
 
         // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
+        let logs = await performQuery.call(this.test);;
+
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
-        const data = getParamsFromIncomingEvent(logs);
-        await this.test.dispatch.respond2(data.id, "pum-tum-pum", "hi", { from: provider });
-
-        logs = await subscriberEvents.get();
-        await expect(isEventReceived(logs, "Result2")).to.be.equal(true);
-
-        const q = await this.test.dispStor.getStatus.call(data.id, { from: owner });
-        await expect(parseInt(q.valueOf())).to.be.equal(1);
-
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
+        getParamsFromIncomingEvent(logs);
     });
 
     it("DISPATCH_7 - respond2() - Respond will throw error if it was called not from provider address", async function () {
 
         await prepareProvider.call(this.test);
-        await prepareTokens.call(this.test);        
-
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
-
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
+        await prepareTokens.call(this.test);
 
         // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
+        let logs =  await performQuery.call(this.test);;
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
         const data = getParamsFromIncomingEvent(logs);
 
         await expect(this.test.dispatch.respond2(data.id, "pum-tum-pum", "hi", { from: owner })).to.eventually.be.rejectedWith(EVMRevert);
-       
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
     });
 
     it("DISPATCH_8 - respond3() - Respond check", async function () {
 
         await prepareProvider.call(this.test);
-        await prepareTokens.call(this.test);    
-        
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
-
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
+        await prepareTokens.call(this.test);
 
         // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
+        let logs = await performQuery.call(this.test);;
+
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
-        const data = getParamsFromIncomingEvent(logs);
-        await this.test.dispatch.respond3(data.id, "pum", "tum", "pum", { from: provider });
-
-        logs = await subscriberEvents.get();
-        await expect(isEventReceived(logs, "Result3")).to.be.equal(true);
-
-        const q = await this.test.dispStor.getStatus.call(data.id, { from: owner });
-        await expect(parseInt(q.valueOf())).to.be.equal(1);
-
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
+        getParamsFromIncomingEvent(logs);
     });
 
     it("DISPATCH_9 - respond3() - Respond will throw error if it was called not from provider address", async function () {
@@ -314,63 +227,28 @@ contract('Dispatch', function (accounts) {
         await prepareProvider.call(this.test);
         await prepareTokens.call(this.test);
 
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
-
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
-
         // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
+        let logs = await performQuery.call(this.test);;
+
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
         const data = getParamsFromIncomingEvent(logs);
 
         await expect(this.test.dispatch.respond3(data.id, "pum", "tum", "pum", { from: owner })).to.eventually.be.rejectedWith(EVMRevert);
-
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
     });
 
 
     it("DISPATCH_10 - respond4() - Respond check", async function () {
 
         await prepareProvider.call(this.test);
-        await prepareTokens.call(this.test);    
-        
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
-
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
+        await prepareTokens.call(this.test);
 
         // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
+        let logs = await performQuery.call(this.test);;
+
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
-        const data = getParamsFromIncomingEvent(logs);
-        await this.test.dispatch.respond4(data.id, "1", "2", "4", "8", { from: provider });
-
-        logs = await subscriberEvents.get();
-        await expect(isEventReceived(logs, "Result4")).to.be.equal(true);
-
-        const q = await this.test.dispStor.getStatus.call(data.id, { from: owner });
-        await expect(parseInt(q.valueOf())).to.be.equal(1);
-
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
+        getParamsFromIncomingEvent(logs);
     });
 
     it("DISPATCH_11 - respond4() - Respond will throw error if it was called not from provider address", async function () {
@@ -378,29 +256,15 @@ contract('Dispatch', function (accounts) {
         await prepareProvider.call(this.test);
         await prepareTokens.call(this.test);
 
-        const dispatchEvents = this.test.dispatch.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        dispatchEvents.watch((err, res) => { });
-        const subscriberEvents = this.test.subscriber.allEvents({ fromBlock: 0, toBlock: 'latest' });
-        subscriberEvents.watch((err, res) => { });
+        // GET ALL EVENTS LOG
+        let logs = await performQuery.call(this.test);;
 
-        // BONDING OUR SUBSCRIBER WITH DATA PROVIDER
-        await this.test.subscriber.bondToOracle(provider, 10, { from: owner });
-
-        // SUBSCRIBE SUBSCRIBER TO RECIVE DATA FROM PROVIDER
-        await this.test.subscriber.queryTest(provider, query, { from: owner });
-
-        // GET ALL EVENTS LOG 
-        let logs = await dispatchEvents.get();
         await expect(isEventReceived(logs, "Incoming")).to.be.equal(true);
 
         const data = getParamsFromIncomingEvent(logs);
 
         await expect(this.test.dispatch.respond4(data.id, "1", "2", "4", "8", { from: owner })).to.eventually.be.rejectedWith(EVMRevert);
-
-        // STOP WATCHING EVENTS 
-        dispatchEvents.stopWatching();
-        subscriberEvents.stopWatching();
-    }); 
+    });
 
 /* IF RESPOND FUNCTIONS CAN PASS, THEN IT FOLLOWS THAT fulfillQuery RETURNS TRUE
     it("DISPATCH_15 - fulfillQuery() - Check that query can be fulfilled", async function () {
