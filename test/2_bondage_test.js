@@ -33,16 +33,19 @@ contract('Bondage', function (accounts) {
     const curveExponential = Utils.CurveTypes["Exponential"];
     const curveLogarithmic = Utils.CurveTypes["Logarithmic"];
     const zeroAddress = Utils.ZeroAddress;
-    const start = 1;
-    const mul = 2;
-    
+
+    const parts= [0,5,5,100];
+    const constants = [2,2,0,1,1,1,10,0,0];
+    const dividers=[1,3];
+
+
     const tokensForOwner = new BigNumber("1500e18");
     const tokensForSubscriber = new BigNumber("5000e18");
     const approveTokens = new BigNumber("1000e18");
 
-    async function prepareProvider(provider = true, curve = true, account = oracle, type = curveLinear) {
+    async function prepareProvider(provider = true, curve = true, account = oracle) {
         if (provider) await this.registry.initiateProvider(publicKey, title, specifier, params, { from: account });
-        if (curve) await this.registry.initiateProviderCurve(specifier, type, start, mul, { from: account });
+        if (curve) await this.registry.initiateProviderCurve(specifier, constants, parts,dividers, { from: account });
     }
 
     async function prepareTokens(allocAddress = subscriber) {
@@ -107,38 +110,18 @@ contract('Bondage', function (accounts) {
         await this.test.bondage.unbond(oracle, specifier, 500, {from: subscriber});
     });
 
-    it("BONDAGE_5 - calcZapForDots() - Check zap for dots calculating", async function () {
+    it.only("BONDAGE_5 - calcZapForDots() - Check zap for dots calculating", async function () {
     
         //prepareProvider.call(this.test, true, true, accounts[5], curveLinear);
         await this.test.registry.initiateProvider(publicKey, title, specifier, params, { from: accounts[5] });
-        await this.test.registry.initiateProviderCurve(specifier, curveLinear, start, mul, { from: accounts[5] });
+        await this.test.registry.initiateProviderCurve(specifier, constants, parts, dividers, { from: accounts[5] });
         
 
-        const jsLinearTok = Utils.calculateTokWithLinearCurve(5, start, mul);
+        const Tok = Utils.calculateTokWithCurve(5, constants,parts,dividers);
         const res1 = await this.test.bondage.calcZapForDots.call(accounts[5], specifier, 5);
         const ethLinearTok = parseInt(res1.valueOf());
 
-        await expect(jsLinearTok).to.be.equal(ethLinearTok);
-
-        //prepareProvider.call(this.test, true, true, accounts[6], curveExponential);
-        await this.test.registry.initiateProvider(publicKey, title, specifier, params, { from: accounts[6] });
-        await this.test.registry.initiateProviderCurve(specifier, curveExponential, start, mul, { from: accounts[6] });
-        
-        const jsExponentialTok = Utils.calculateTokWithExponentialCurve(5, start, mul);
-        const res2 = await this.test.bondage.calcZapForDots.call(accounts[6], specifier, 5);
-        const ethExponentialTok = parseInt(res2.valueOf());
-
-        await expect(jsExponentialTok).to.be.equal(ethExponentialTok);
-
-        //prepareProvider.call(this.test, true, true, accounts[7], curveLogarithmic);
-        await this.test.registry.initiateProvider(publicKey, title, specifier, params, { from: accounts[7] });
-        await this.test.registry.initiateProviderCurve(specifier, curveLogarithmic, start, mul, { from: accounts[7] });
-        
-        const jsLogarithmicTok = Utils.calculateTokWithLogarithmicCurve(5, start, mul);
-        const res3 = await this.test.bondage.calcZapForDots.call(accounts[7], specifier, 5);
-        const ethLogarithmicTok = parseInt(res3.valueOf());
-
-        await expect(jsLogarithmicTok).to.be.equal(ethLogarithmicTok);
+        await expect(Tok).to.be.equal(ethLinearTok);
     });
 
     it("BONDAGE_6 - calcZapForDots() - Check that function throw error if curve not intialized", async function () {

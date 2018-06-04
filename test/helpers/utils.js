@@ -21,7 +21,7 @@ exports.fetchPureArray = function (res, parseFunc) {
     return arr;
 }
 
-exports.calculateTokWithLinearCurve = function (dotsRequired, startValue, multiplier) {
+exports.calculateTokWithCurve = function (dotsRequired, constants, parts, dividers) {
     let tok = 0;
     for (let i = 0; i < dotsRequired; i++) {
         tok += multiplier * i + startValue
@@ -29,22 +29,3 @@ exports.calculateTokWithLinearCurve = function (dotsRequired, startValue, multip
     return tok;
 }
 
-exports.calculateTokWithExponentialCurve = function (dotsRequired, startValue, multiplier) {
-    let tok = 0;
-    for (let i = 0; i < dotsRequired; i++) {
-        tok += multiplier * Math.pow(i, 2) + startValue;
-    }
-    return tok;
-}
-
-exports.calculateTokWithLogarithmicCurve = function (dotsRequired, startValue, multiplier) {
-    let tok = 0;
-    for (let i = 0; i < dotsRequired; i++) {
-        let totalBound = i;
-        if (totalBound == 0) {
-            totalBound = 1;
-        }
-        tok += multiplier * Math.log2(totalBound) + startValue;
-    }
-    return Math.ceil(tok);
-}
