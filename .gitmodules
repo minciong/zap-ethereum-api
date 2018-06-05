@@ -1,0 +1,9 @@
+[submodule "nodejs-api"]
+	path = nodejs-api
+	url = https://github.com/zapproject/zap-nodejs-api.git
+[submodule "zap-python-api"]
+	path = zap-python-api
+	url = https://github.com/zapproject/zap-python-api.git
+[submodule "python-api"]
+	path = python-api
+	url = https://github.com/zapproject/zap-python-api.git
