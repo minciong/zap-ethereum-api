@@ -33,7 +33,7 @@ contract('Registry', async (accounts) => {
     const params = ["param1", "param2"];
 
     const parts= [0,5,5,100];
-    const constants = [2,2,0,1,1,1,10,0,0];
+    const constants = [2,2,0,1,0,1,10,0,0];
     const dividers=[1,3];
 
     beforeEach(async function deployContracts() {
@@ -135,11 +135,11 @@ contract('Registry', async (accounts) => {
 
     });
 
-    it("REGISTRY_13 - getProviderCurve() - Check that uninitialized provider curve is empty", async function () {
+    it.only("REGISTRY_13 - getProviderCurve() - Check that uninitialized provider curve is empty", async function () {
         await this.test.registry.initiateProvider(publicKey, title, specifier, params, { from: owner });
 
         const res = await this.test.registry.getProviderCurve.call(owner, specifier, { from: owner });
-        console.log("result : ", res)
+        console.log("result : ", res);
         for(let arr of res ) {
             arr = Utils.fetchPureArray(arr, parseInt);
             await expect(arr.length.valueOf()).to.be.an('number').equal(0);

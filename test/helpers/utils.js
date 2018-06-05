@@ -22,6 +22,7 @@ exports.fetchPureArray = function (res, parseFunc) {
 }
 
 exports.calculateTokWithCurve = function (dotsRequired, constants, parts, dividers) {
+    //TODO refactor this to use multiple bonding curve
     let tok = 0;
     for (let i = 0; i < dotsRequired; i++) {
         tok += multiplier * i + startValue
